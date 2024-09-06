@@ -1,6 +1,6 @@
 // App.js
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, FlatList } from 'react-native';
+import { StyleSheet, Text, View, FlatList, RefreshControl } from 'react-native';
 import { useState } from 'react';
 import TaskInput from './TaskInput';
 import TaskItem from './TaskItem';
@@ -10,6 +10,7 @@ export default function App() {
   const [deadline, setDeadline] = useState('');
   const [editing, setEditing] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const addTask = (taskValue, deadlineValue) => {
     if (taskValue.length > 0) {
@@ -44,6 +45,14 @@ export default function App() {
     setTasks(updatedTasks);
   };
 
+  const refreshTasks = () => {
+    setRefreshing(true);
+    // Simulate a network request or data fetch
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
+
   const incompleteTasks = tasks.filter(task => !task.completed);
   const completedTasks = tasks.filter(task => task.completed);
 
@@ -72,6 +81,12 @@ export default function App() {
           />
         )}
         keyExtractor={(item) => item.key}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refreshTasks}
+          />
+        }
       />
 
       <Text style={styles.sectionTitle}>Finished Tasks</Text>
@@ -86,6 +101,12 @@ export default function App() {
           />
         )}
         keyExtractor={(item) => item.key}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refreshTasks}
+          />
+        }
       />
 
       <StatusBar style="auto" />
