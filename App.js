@@ -1,9 +1,12 @@
-// App.js
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, FlatList, RefreshControl } from 'react-native';
-import { useState } from 'react';
+import { StyleSheet, Text, View, FlatList, RefreshControl, Modal, Pressable } from 'react-native';
+import { useState, useEffect } from 'react';
 import TaskInput from './TaskInput';
 import TaskItem from './TaskItem';
+import { AntDesign } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const TASKS_KEY = 'tasks';
 
 export default function App() {
   const [task, setTask] = useState('');
@@ -11,6 +14,48 @@ export default function App() {
   const [editing, setEditing] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentDate, setCurrentDate] = useState('');
+
+  useEffect(() => {
+    const getPHDate = () => {
+      const options = { 
+        timeZone: 'Asia/Manila', 
+        weekday: 'long',
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      };
+      const now = new Date().toLocaleDateString('en-PH', options);
+      setCurrentDate(now);
+    };
+
+    getPHDate();
+    loadTasks();
+  }, []);
+
+  useEffect(() => {
+    saveTasks();
+  }, [tasks]);
+
+  const loadTasks = async () => {
+    try {
+      const tasksJson = await AsyncStorage.getItem(TASKS_KEY);
+      if (tasksJson) {
+        setTasks(JSON.parse(tasksJson));
+      }
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    }
+  };
+
+  const saveTasks = async () => {
+    try {
+      await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+    } catch (error) {
+      console.error('Failed to save tasks:', error);
+    }
+  };
 
   const addTask = (taskValue, deadlineValue) => {
     if (taskValue.length > 0) {
@@ -25,17 +70,8 @@ export default function App() {
       }
       setTask('');
       setDeadline('');
+      setModalVisible(false);
     }
-  };
-
-  const deleteTask = (key) => {
-    setTasks(tasks.filter(task => task.key !== key));
-  };
-
-  const editTask = (key, value, deadlineValue) => {
-    setTask(value);
-    setDeadline(deadlineValue);
-    setEditing(key);
   };
 
   const toggleTaskCompletion = (key) => {
@@ -45,9 +81,21 @@ export default function App() {
     setTasks(updatedTasks);
   };
 
+  const editTask = (key, value, deadline) => {
+    setTask(value);
+    setDeadline(deadline);
+    setEditing(key);
+    setModalVisible(true);
+  };
+
+  const deleteTask = (key) => {
+    const updatedTasks = tasks.filter((t) => t.key !== key);
+    setTasks(updatedTasks);
+  };
+
   const refreshTasks = () => {
     setRefreshing(true);
-    // Simulate a network request or data fetch
+    console.log('Refreshing tasks...');
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -58,26 +106,18 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My To-Do List</Text>
-
-      <TaskInput
-        task={task}
-        setTask={setTask}
-        addTask={addTask}
-        editing={editing}
-        deadline={deadline}
-        setDeadline={setDeadline}
-      />
-
+      <Text style={styles.welcomeMessage}>Hello, you can do it!</Text>
+      <Text style={styles.dateText}>{currentDate}</Text>
+      <Text style={styles.title}>Your To-Dos</Text>
       <Text style={styles.sectionTitle}>Active Tasks</Text>
       <FlatList
         data={incompleteTasks}
         renderItem={({ item }) => (
           <TaskItem
             item={item}
+            toggleTaskCompletion={toggleTaskCompletion}
             editTask={editTask}
             deleteTask={deleteTask}
-            toggleTaskCompletion={toggleTaskCompletion}
           />
         )}
         keyExtractor={(item) => item.key}
@@ -88,27 +128,52 @@ export default function App() {
           />
         }
       />
-
       <Text style={styles.sectionTitle}>Finished Tasks</Text>
       <FlatList
         data={completedTasks}
         renderItem={({ item }) => (
           <TaskItem
             item={item}
+            toggleTaskCompletion={toggleTaskCompletion}
             editTask={editTask}
             deleteTask={deleteTask}
-            toggleTaskCompletion={toggleTaskCompletion}
           />
         )}
         keyExtractor={(item) => item.key}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={refreshTasks}
-          />
-        }
       />
-
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Pressable
+              style={styles.closeIcon}
+              onPress={() => setModalVisible(false)}
+            >
+              <AntDesign name="close" size={24} color="black" />
+            </Pressable>
+            <View style={styles.taskInputContainer}>
+              <TaskInput
+                task={task}
+                setTask={setTask}
+                addTask={addTask}
+                editing={editing}
+                deadline={deadline}
+                setDeadline={setDeadline}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Pressable
+        style={styles.addButton}
+        onPress={() => setModalVisible(true)}
+      >
+        <AntDesign name="pluscircle" size={64} color="#6A1B9A" />
+      </Pressable>
       <StatusBar style="auto" />
     </View>
   );
@@ -119,19 +184,59 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#EDE7F6',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 60,
+  },
+  welcomeMessage: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#6A1B9A',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#4A148C',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#4A148C',
-    marginBottom: 20,
-    textAlign: 'center',
+    marginBottom: 10,
+    textAlign: 'left',
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#4A148C',
-    marginVertical: 10,
+    marginVertical: 2,
+  },
+  addButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+    position: 'relative',
+  },
+  closeIcon: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
+  },
+  taskInputContainer: {
+    marginTop: 40,
   },
 });
