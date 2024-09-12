@@ -66,9 +66,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   task: {
-    fontSize: 16,
+    fontSize: 18, // Increase the font size
+    fontWeight: 'normal',
     color: '#4A148C',
-  },
+  },  
   completedText: {
     textDecorationLine: 'line-through',
     color: '#9E9E9E',

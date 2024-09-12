@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, FlatList, RefreshControl, Modal, Pressable } from 'react-native';
+import { StyleSheet, Text, View, FlatList, RefreshControl, Modal, Pressable, TextInput, Image } from 'react-native';
 import { useState, useEffect } from 'react';
 import TaskInput from './TaskInput';
 import TaskItem from './TaskItem';
@@ -16,6 +16,7 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const getPHDate = () => {
@@ -95,19 +96,35 @@ export default function App() {
 
   const refreshTasks = () => {
     setRefreshing(true);
-    console.log('Refreshing tasks...');
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
   };
 
-  const incompleteTasks = tasks.filter(task => !task.completed);
-  const completedTasks = tasks.filter(task => task.completed);
+  const filterTasks = (tasks) => {
+    return tasks.filter((task) =>
+      task.value.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
+  const incompleteTasks = filterTasks(tasks.filter(task => !task.completed));
+  const completedTasks = filterTasks(tasks.filter(task => task.completed));
 
   return (
     <View style={styles.container}>
       <Text style={styles.welcomeMessage}>Hello, you can do it!</Text>
       <Text style={styles.dateText}>{currentDate}</Text>
+      
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search tasks..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
+
+      {incompleteTasks.length === 0 && searchQuery !== '' && (
+        <Text style={styles.noTasksText}>No tasks found</Text>
+      )}
       <Text style={styles.title}>Your To-Dos</Text>
       <Text style={styles.sectionTitle}>Active Tasks</Text>
       <FlatList
@@ -216,6 +233,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 30,
     right: 30,
+    elevation: 5, // Added shadow for floating effect
   },
   modalContainer: {
     flex: 1,
@@ -238,5 +256,37 @@ const styles = StyleSheet.create({
   },
   taskInputContainer: {
     marginTop: 40,
+  },
+  searchInput: {
+    borderColor: '#D1C4E9',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  noTasksText: {
+    fontSize: 18,
+    color: '#9E9E9E',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  taskCard: { // Example card style for tasks
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  deadlineText: { // Example style for deadlines
+    color: '#F44336', // Red color for deadlines
+    fontSize: 14,
   },
 });
